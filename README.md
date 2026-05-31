@@ -9,7 +9,7 @@ App de bolão para a Copa do Mundo 2026 — glassmorphism, placar ao vivo, ranki
 1. Crie repositório público `bolao-copa-2026`
 2. Faça upload do `index.html`
 3. **Settings → Pages → Branch: main / root → Save**
-4. Acesse: `https://SEU-USUARIO.github.io/bolao-copa-2026/`
+4. Acesse: `https://apoliveira90.github.io/bolao-copa-2026/`
 
 ---
 
