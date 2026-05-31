@@ -52,6 +52,15 @@ body{
 .phase-track{height:5px;background:rgba(255,255,255,.08);border-radius:4px;overflow:hidden}
 .phase-fill{height:100%;background:linear-gradient(90deg,var(--azul),var(--emerald),var(--gold));border-radius:4px;transition:.6s ease}
 
+/* ── TOGGLE PALPITES ── */
+function togglePalpites(el){
+  const arrow=el.querySelector('.palprow-arrow');
+  const detail=el.nextElementSibling;
+  const isOpen=detail.classList.contains('open');
+  detail.classList.toggle('open',!isOpen);
+  if(arrow) arrow.classList.toggle('open',!isOpen);
+}
+
 /* ── TABS ── */
 .tabs{display:flex;gap:4px;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.12);border-radius:var(--radius-sm);padding:4px;margin-bottom:14px;backdrop-filter:var(--blur);-webkit-backdrop-filter:var(--blur)}
 .tab{flex:1;padding:8px 4px;text-align:center;font-size:12px;font-weight:600;color:var(--text-muted);cursor:pointer;border-radius:7px;transition:.18s;border:none;background:none}
@@ -169,13 +178,26 @@ body{
 .sinput::-webkit-inner-spin-button{display:none}
 .sinput:focus{outline:none;border-color:var(--gold);box-shadow:0 0 10px rgba(244,196,48,.28)}
 .score-sep{color:rgba(255,255,255,.25);font-weight:700}
-.palprow{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:5px;margin-top:9px}
+.palprow{margin-top:8px}
+.palprow-toggle{display:flex;align-items:center;justify-content:space-between;cursor:pointer;padding:5px 0;border-top:1px solid rgba(255,255,255,.07);user-select:none}
+.palprow-toggle-left{font-size:10px;color:var(--text-dim);font-weight:600;text-transform:uppercase;letter-spacing:.5px;display:flex;align-items:center;gap:6px}
+.palprow-toggle-mini{display:flex;gap:4px;align-items:center}
+.palprow-mini-tip{display:flex;gap:3px;align-items:center;flex-wrap:wrap}
+.palprow-mini-chip{width:22px;height:22px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:8px;font-weight:800;color:#fff;flex-shrink:0}
+.palprow-mini-score{font-size:10px;font-weight:700;color:var(--text-dim)}
+.palprow-mini-chip.exato{box-shadow:0 0 0 2px var(--emerald)}
+.palprow-mini-chip.vencedor{box-shadow:0 0 0 2px var(--cyan)}
+.palprow-mini-chip.errou{box-shadow:0 0 0 2px rgba(239,68,68,.5)}
+.palprow-arrow{font-size:10px;color:var(--text-dim);transition:transform .2s}
+.palprow-arrow.open{transform:rotate(180deg)}
+.palprow-detail{display:none;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:4px;padding-top:6px}
+.palprow-detail.open{display:grid}
 .pchip{background:rgba(255,255,255,.05);border-radius:7px;padding:5px 9px;font-size:11px;display:flex;justify-content:space-between;align-items:center;border-left:2px solid rgba(255,255,255,.1);gap:6px;transition:.15s}
 .pchip.exato{background:rgba(16,185,129,.1);border-left-color:var(--emerald)}
 .pchip.vencedor{background:rgba(0,39,118,.32);border-left-color:var(--cyan)}
 .pchip.errou{background:rgba(239,68,68,.07);border-left-color:rgba(239,68,68,.35)}
 .pchip-left{display:flex;align-items:center;gap:5px}
-.pchip-name{font-weight:700;font-size:11px;color:var(--text)}
+.pchip-name{font-weight:700;font-size:10px;color:var(--text)}
 .pchip-sc{font-weight:700;font-size:12px;color:var(--text)}
 .pchip-pts{font-size:10px;font-weight:700;margin-left:3px}
 .pchip-pts.p5{color:var(--emerald)}.pchip-pts.p3{color:var(--cyan)}.pchip-pts.p0{color:rgba(255,255,255,.2)}
@@ -375,6 +397,7 @@ td:first-child{color:var(--text-dim)}
       </div>
       <div class="sim-gain-panel" id="simGain"></div>
       <div class="sim-summary" id="simSummary"></div>
+      <div class="sim-summary" id="simPrize" style="margin-top:8px"></div>
       <button class="btn-reset" onclick="resetSim()">↺ Limpar simulação</button>
     </div>
   </div>
@@ -602,15 +625,33 @@ function renderGames(){
   if(!filtered.length){list.innerHTML='<div class="empty">Nenhum jogo neste filtro.</div>';return;}
   list.innerHTML=filtered.map(game=>{
     const idx=game.n-1,res=officialResults[idx],live=liveGames[idx],isDone=!!res,isLive=!!live;
-    const chips=PARTICIPANTS.map(p=>{
+    // Monta chips dos palpites
+    const chipsData=PARTICIPANTS.map(p=>{
       const[pa,pb]=getPalpite(p.name,idx),er=res||(isLive?live.score:null),pts=er?calcPoints(er,pa,pb):null;
-      let cls='',ptsBadge='';
-      if(pts===5){cls='exato';ptsBadge='<span class="pchip-pts p5">+5</span>';}
-      else if(pts===3){cls='vencedor';ptsBadge='<span class="pchip-pts p3">+3</span>';}
-      else if(pts===0&&pts!==null){cls='errou';ptsBadge='<span class="pchip-pts p0">0</span>';}
+      let cls='',ptsBadge='',ptsCls='';
+      if(pts===5){cls='exato';ptsBadge='+5';ptsCls='p5';}
+      else if(pts===3){cls='vencedor';ptsBadge='+3';ptsCls='p3';}
+      else if(pts===0&&pts!==null){cls='errou';ptsBadge='0';ptsCls='p0';}
       const pos=rankPositions[p.name]||1;
-      return`<div class="pchip ${cls}"><div class="pchip-left">${av(p.name,p.color,26)}<span class="pchip-name">${p.name}</span></div><span class="pchip-sc">${pa}–${pb}${ptsBadge}</span></div>`;
-    }).join('');
+      const firstName=p.name.split(' ')[0];
+      return{p,pa,pb,cls,ptsBadge,ptsCls,firstName,pts};
+    });
+    // Mini chips (sempre visíveis — avatares coloridos com borda de acerto)
+    const miniChips=chipsData.map(d=>`<div class="palprow-mini-chip ${d.cls}" style="background:${d.p.color}" title="${d.firstName}: ${d.pa}–${d.pb}${d.ptsBadge?(' ('+d.ptsBadge+')'):''}">${d.p.abbr||d.firstName.slice(0,2).toUpperCase()}</div>`).join('');
+    // Score summary mini
+    const exatos=chipsData.filter(d=>d.cls==='exato').length;
+    const venc=chipsData.filter(d=>d.cls==='vencedor').length;
+    const miniInfo=res||isLive?`<span class="palprow-mini-score">${exatos?'🎯'+exatos:''} ${venc?'✓'+venc:''}</span>`:'';
+    // Chips detalhados (colapsáveis)
+    const detailChips=chipsData.map(d=>`<div class="pchip ${d.cls}"><div class="pchip-left">${av(d.p.name,d.p.color,24)}<span class="pchip-name">${d.firstName}</span></div><span class="pchip-sc">${d.pa}–${d.pb}${d.ptsBadge?`<span class="pchip-pts ${d.ptsCls}">${d.ptsBadge}</span>`:''}</span></div>`).join('');
+    const chips=`<div class="palprow-toggle" onclick="togglePalpites(this)">
+      <div class="palprow-toggle-left">
+        <div class="palprow-mini-tip">${miniChips}</div>
+        ${miniInfo}
+      </div>
+      <span class="palprow-arrow">▾</span>
+    </div>
+    <div class="palprow-detail">${detailChips}</div>`;
     let scoreArea='',statusBadge='',cardCls='';
     if(isDone){scoreArea=`<div class="gc-score-official">${res[0]}–${res[1]}</div>`;statusBadge='<span class="gc-status done">✔ Finalizado</span>';}
     else if(isLive){scoreArea=`<div class="gc-score-official">${live.score[0]}–${live.score[1]}</div><div class="gc-score-min">🔴 ${live.minute}</div>`;statusBadge='<span class="gc-status live">🔴 AO VIVO</span>';cardCls='live-game';}
@@ -661,8 +702,23 @@ function simInputChange(el){const gi=parseInt(el.dataset.game),team=parseInt(el.
 function renderSimRanking(){
   const base=buildRanking(false),sim=buildRanking(true),sc=Object.keys(simResults).length;
   document.getElementById('simRanking').innerHTML=sim.map((p,i)=>{const bPts=base.find(b=>b.name===p.name)?.pts||0,delta=p.pts-bPts,dcls=delta>0?'up':delta<0?'dn':'eq',dstr=delta>0?`+${delta}`:delta<0?`${delta}`:'=';return`<div class="sim-rrow"><div class="sim-rpos">${i===0?'🥇':i===1?'🥈':i===2?'🥉':i+1+'º'}</div><div class="sim-rname">${av(p.name,p.color,26)}<span>${p.name}</span></div><div class="sim-rpts">${p.pts}</div><div class="sim-rdelta ${dcls}">${dstr}</div></div>`;}).join('');
-  document.getElementById('simGain').innerHTML=`<div class="sim-gain-title">⚡ Ganho projetado</div>`+sim.map(p=>{const bPts=base.find(b=>b.name===p.name)?.pts||0,gain=p.pts-bPts,cls=gain>0?'pos':gain<0?'neg':'zero',str=gain>0?`+${gain} pts`:gain<0?`${gain} pts`:'sem mudança';return`<div class="sim-gain-row"><span class="sim-gain-name">${av(p.name,p.color,22)}<span>${p.name}</span></span><span class="sim-gain-val ${cls}">${str}</span></div>`;}).join('');
+  document.getElementById('simGain').innerHTML=`<div class="sim-gain-title">⚡ Ganho projetado</div>`+sim.map(p=>{const bPts=base.find(b=>b.name===p.name)?.pts||0,gain=p.pts-bPts,cls=gain>0?'pos':gain<0?'neg':'zero',str=gain>0?`+${gain} pts`:gain<0?`${gain} pts`:'sem mudança';return`<div class="sim-gain-row"><span class="sim-gain-name">${av(p.name,p.color,22)}<span>${p.name.split(" ")[0]}</span></span><span class="sim-gain-val ${cls}">${str}</span></div>`;}).join('');
   document.getElementById('simSummary').innerHTML=`<div class="sim-summary-title">Resumo</div><div class="sim-stat"><span class="sim-stat-label">Jogos simulados</span><span class="sim-stat-val">${sc}</span></div><div class="sim-stat"><span class="sim-stat-label">Jogos pendentes</span><span class="sim-stat-val">${GAMES_RAW.filter(g=>!officialResults[g.n-1]).length}</span></div><div class="sim-stat"><span class="sim-stat-label">Pts extras possíveis</span><span class="sim-stat-val">${sc*5}</span></div>`;
+  // Premiação projetada no simulador
+  const n=PARTICIPANTS.length, total=n*APOSTA_POR_PESSOA;
+  const leaderPts2=sim[0]?.pts||0, leaders2=sim.filter(p=>p.pts===leaderPts2);
+  const multiLider2=leaders2.length>1;
+  const segundos2=sim.filter(p=>p.pts<leaderPts2&&p.pts===sim.find(x=>x.pts<leaderPts2)?.pts);
+  const v1=multiLider2?total/leaders2.length:total*0.8;
+  const v2=(!multiLider2&&segundos2.length>0)?total*0.2/segundos2.length:0;
+  const el=document.getElementById('simPrize');
+  if(el) el.innerHTML=`<div class="sim-summary-title">💰 Premiação projetada</div>`+
+    sim.map(p=>{
+      const isL=leaders2.includes(p), isS=!multiLider2&&segundos2.includes(p);
+      const val=isL?v1:isS?v2:0;
+      const cls=val>0?'pos':'zero';
+      return`<div class="sim-stat"><span class="sim-stat-label">${p.name.split(' ')[0]}</span><span class="sim-stat-val" style="color:${val>0?'var(--gold)':'var(--text-dim)'}">${val>0?fmt(val):'–'}</span></div>`;
+    }).join('');
 }
 function resetSim(){Object.keys(simResults).forEach(k=>delete simResults[k]);Object.keys(simBuffer).forEach(k=>delete simBuffer[k]);renderSimGames();renderSimRanking();}
 
@@ -694,6 +750,15 @@ async function fetchLive(){try{const r=await fetch('https://site.api.espn.com/ap
 function toggleRefresh(){refreshOn=!refreshOn;const b=document.getElementById('liveBadge'),d=document.getElementById('liveDot'),t=document.getElementById('liveText');if(refreshOn){b.classList.remove('paused');d.style.background='#4ade80';d.style.animation='';d.style.boxShadow='0 0 6px #4ade80';t.textContent='AO VIVO';startRefresh();}else{b.classList.add('paused');d.style.background='#9ca3af';d.style.animation='none';d.style.boxShadow='none';t.textContent='PAUSADO';clearInterval(refreshTimer);document.getElementById('hstatus').textContent='Auto-refresh pausado';}}
 function startRefresh(){fetchLive();refreshTimer=setInterval(()=>{if(refreshOn)fetchLive();},60000);}
 
+/* ── TOGGLE PALPITES ── */
+function togglePalpites(el){
+  const arrow=el.querySelector('.palprow-arrow');
+  const detail=el.nextElementSibling;
+  const isOpen=detail.classList.contains('open');
+  detail.classList.toggle('open',!isOpen);
+  if(arrow) arrow.classList.toggle('open',!isOpen);
+}
+
 /* ── TABS ── */
 function goTab(id,btn){document.querySelectorAll('.section').forEach(s=>s.classList.remove('active'));document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));document.getElementById(id).classList.add('active');btn.classList.add('active');if(id==='jogos')renderGames();if(id==='sim'){renderSimGames();renderSimRanking();}if(id==='hist')renderHist();if(id==='ranking')renderRanking();}
 
@@ -714,7 +779,11 @@ async function fetchParticipants(){
         name:     p.name,
         color:    p.color || gerarCor(i),
         abbr:     p.abbr  || gerarAbbr(p.name),
-        palpites: p.palpites || []
+        // Sanitiza palpites: remove datas seriais do Excel (valores > 20 são inválidos como gols)
+        palpites: (p.palpites || []).map(v => {
+          const n = Number(v);
+          return (!isNaN(n) && n >= 0 && n <= 20) ? n : 0;
+        })
       }));
       const upd = data.updatedAt ? new Date(data.updatedAt).toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'}) : '–';
       if(statusEl) statusEl.textContent = `✅ ${PARTICIPANTS.length} participantes · Drive sync ${upd}`;
