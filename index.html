@@ -776,47 +776,63 @@ const TM={
 function nT(n){return TM[n.toLowerCase()]||n;}
 function mG(h,a){for(let i=0;i<GAMES_RAW.length;i++){const g=GAMES_RAW[i],g1=g.t1.toLowerCase(),g2=g.t2.toLowerCase(),hL=h.toLowerCase(),aL=a.toLowerCase();if((g1===hL||g1.includes(hL)||hL.includes(g1))&&(g2===aL||g2.includes(aL)||aL.includes(g2)))return i;if((g2===hL||g2.includes(hL)||hL.includes(g2))&&(g1===aL||g1.includes(aL)||aL.includes(g1)))return i;}return -1;}
 async function fetchLive(){
-  const endpoints=[
-    'https://site.api.espn.com/apis/site/v2/sports/soccer/fifa.world/scoreboard',
-    'https://site.api.espn.com/apis/site/v2/sports/soccer/fifa.world/scoreboard?limit=100',
-  ];
-  let data=null;
-  for(const url of endpoints){
-    try{
-      const ctrl=new AbortController();
-      setTimeout(()=>ctrl.abort(),8000);
-      const r=await fetch(url,{signal:ctrl.signal});
-      if(r.ok){data=await r.json();break;}
-    }catch(_){}
-  }
-  if(!data){document.getElementById('hstatus').textContent='⚠️ Sem conexão com ESPN';return;}
-  let upd=false;
-  for(const ev of(data.events||[])){
-    const comp=ev.competitions?.[0];if(!comp)continue;
-    const home=comp.competitors?.find(c=>c.homeAway==='home');
-    const away=comp.competitors?.find(c=>c.homeAway==='away');
-    if(!home||!away)continue;
-    const hN=nT(home.team?.displayName||home.team?.shortDisplayName||'');
-    const aN=nT(away.team?.displayName||away.team?.shortDisplayName||'');
-    const hS=parseInt(home.score||0),aS=parseInt(away.score||0);
-    const status=comp.status?.type?.name||'';
-    const minute=comp.status?.displayClock||comp.status?.type?.shortDetail||'';
-    const completed=comp.status?.type?.completed||false;
-    let idx=mG(hN,aN);
-    // fallback: tenta abreviação
-    if(idx===-1){
-      const hA=nT(home.team?.abbreviation||'');
-      const aA=nT(away.team?.abbreviation||'');
-      idx=mG(hA,aA);
-    }
-    if(idx===-1) continue;
-    if(completed){
-      officialResults[idx]=[hS,aS];delete liveGames[idx];upd=true;
-    } else if(status.includes('IN_PROGRESS')||status.includes('HALFTIME')||status==='STATUS_IN_PROGRESS'||status==='STATUS_HALFTIME'){
-      liveGames[idx]={score:[hS,aS],minute};upd=true;
-    }
-  }
-  document.getElementById('hstatus').textContent='Atualizado '+new Date().toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
+  const APPS_URL='https://script.google.com/macros/s/AKfycbyh65Zv6zPXTB80lZYKGKNpf6By5_g9jese6fMB3d6g_8EPUV4INYNGve7sq1vy0Gem0g/exec';
+  let upd=false, statusParts=[];
+
+  // ── 1. ESPN direto → resultados finalizados (confiável) ──
+  try{
+    const ctrl=new AbortController();setTimeout(()=>ctrl.abort(),8000);
+    const r=await fetch('https://site.api.espn.com/apis/site/v2/sports/soccer/fifa.world/scoreboard',{signal:ctrl.signal});
+    if(r.ok){
+      const data=await r.json();
+      for(const ev of(data.events||[])){
+        const comp=ev.competitions?.[0];if(!comp)continue;
+        const home=comp.competitors?.find(c=>c.homeAway==='home');
+        const away=comp.competitors?.find(c=>c.homeAway==='away');
+        if(!home||!away)continue;
+        const hN=nT(home.team?.displayName||''),aN=nT(away.team?.displayName||'');
+        const hS=parseInt(home.score||0),aS=parseInt(away.score||0);
+        const status=comp.status?.type?.name||'';
+        const completed=comp.status?.type?.completed||false;
+        const idx=mG(hN,aN);if(idx===-1)continue;
+        if(completed&&status==='STATUS_FINAL'){
+          if(!officialResults[idx]){officialResults[idx]=[hS,aS];delete liveGames[idx];upd=true;}
+        }
+      }
+      statusParts.push('📡✅');
+    } else statusParts.push('📡❌');
+  }catch(_){statusParts.push('📡❌');}
+
+  // ── 2. Apps Script → jogos ao vivo (API-Football + WC26) ──
+  try{
+    const ctrl2=new AbortController();setTimeout(()=>ctrl2.abort(),10000);
+    const r2=await fetch(APPS_URL+'?t='+Date.now(),{signal:ctrl2.signal});
+    if(r2.ok){
+      const data2=await r2.json();
+      // Resultados finalizados do Apps Script (complementa ESPN)
+      if(data2.resultados){
+        for(const[idx,score]of Object.entries(data2.resultados)){
+          const i=parseInt(idx);
+          if(!officialResults[i]){officialResults[i]=score;delete liveGames[i];upd=true;}
+        }
+      }
+      // Jogos ao vivo — principal uso do Apps Script
+      if(data2.lives){
+        Object.keys(liveGames).forEach(k=>{if(!data2.lives[k])delete liveGames[k];});
+        for(const[idx,live]of Object.entries(data2.lives)){
+          const i=parseInt(idx);
+          if(!officialResults[i]){liveGames[i]=live;upd=true;}
+        }
+      }
+      const f=data2.fontes||{};
+      statusParts.push((f.apiFootball==='OK'?'⚡✅':'⚡❌'));
+      statusParts.push((f.wc26==='OK'?'🌐✅':'🌐❌'));
+    } else statusParts.push('⚡❌ 🌐❌');
+  }catch(_){statusParts.push('⚡❌ 🌐❌');}
+
+  document.getElementById('hstatus').textContent='Atualizado '+
+    new Date().toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit',second:'2-digit'})+
+    ' · '+statusParts.join(' ');
   if(upd){renderRanking();if(document.getElementById('jogos').classList.contains('active'))renderGames();}
 }
 function toggleRefresh(){refreshOn=!refreshOn;const b=document.getElementById('liveBadge'),d=document.getElementById('liveDot'),t=document.getElementById('liveText');if(refreshOn){b.classList.remove('paused');d.style.background='#4ade80';d.style.animation='';d.style.boxShadow='0 0 6px #4ade80';t.textContent='AO VIVO';startRefresh();}else{b.classList.add('paused');d.style.background='#9ca3af';d.style.animation='none';d.style.boxShadow='none';t.textContent='PAUSADO';clearInterval(refreshTimer);document.getElementById('hstatus').textContent='Auto-refresh pausado';}}
