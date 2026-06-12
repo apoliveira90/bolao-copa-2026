@@ -775,6 +775,14 @@ const TM={
 };
 function nT(n){return TM[n.toLowerCase()]||n;}
 function mG(h,a){for(let i=0;i<GAMES_RAW.length;i++){const g=GAMES_RAW[i],g1=g.t1.toLowerCase(),g2=g.t2.toLowerCase(),hL=h.toLowerCase(),aL=a.toLowerCase();if((g1===hL||g1.includes(hL)||hL.includes(g1))&&(g2===aL||g2.includes(aL)||aL.includes(g2)))return i;if((g2===hL||g2.includes(hL)||hL.includes(g2))&&(g1===aL||g1.includes(aL)||aL.includes(g1)))return i;}return -1;}
+// Envia resultado confirmado para o Apps Script persistir
+async function salvarResultadoNoScript(idx, score){
+  const APPS_URL='https://script.google.com/macros/s/AKfycbyh65Zv6zPXTB80lZYKGKNpf6By5_g9jese6fMB3d6g_8EPUV4INYNGve7sq1vy0Gem0g/exec';
+  try{
+    await fetch(APPS_URL+'?action=saveResult&idx='+idx+'&h='+score[0]+'&a='+score[1], {mode:'no-cors'});
+  }catch(_){}
+}
+
 async function fetchLive(){
   const APPS_URL='https://script.google.com/macros/s/AKfycbyh65Zv6zPXTB80lZYKGKNpf6By5_g9jese6fMB3d6g_8EPUV4INYNGve7sq1vy0Gem0g/exec';
   let upd=false, statusParts=[];
@@ -796,7 +804,13 @@ async function fetchLive(){
         const completed=comp.status?.type?.completed||false;
         const idx=mG(hN,aN);if(idx===-1)continue;
         if(completed&&status==='STATUS_FINAL'){
-          if(!officialResults[idx]){officialResults[idx]=[hS,aS];delete liveGames[idx];upd=true;}
+          if(!officialResults[idx]){
+            officialResults[idx]=[hS,aS];
+            delete liveGames[idx];
+            upd=true;
+            // Salva no Apps Script para persistir entre sessões
+            salvarResultadoNoScript(idx,[hS,aS]);
+          }
         }
       }
       statusParts.push('📡✅');
