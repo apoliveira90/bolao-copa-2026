@@ -476,7 +476,7 @@ function calcPoints(r,p1,p2){if(!r)return null;if(r[0]===p1&&r[1]===p2)return 5;
 function getPalpite(pn,i){const p=PARTICIPANTS.find(x=>x.name===pn);const a=p?.palpites||[];return[a[i*2]??0,a[i*2+1]??0];}
 function getEff(i){return simResults[i]||officialResults[i];}
 function calcScore(pn,useSim){let pts=0,ex=0,vc=0;for(let i=0;i<72;i++){const r=useSim?getEff(i):officialResults[i];if(!r)continue;const[p1,p2]=getPalpite(pn,i),p=calcPoints(r,p1,p2);pts+=p;if(p===5)ex++;else if(p===3)vc++;}return{pts,exatos:ex,venc:vc};}
-function buildRanking(useSim){return PARTICIPANTS.map(p=>({...p,...calcScore(p.name,useSim)})).sort((a,b)=>b.pts-a.pts||b.exatos-a.exatos);}
+function buildRanking(useSim){return PARTICIPANTS.map(p=>({...p,...calcScore(p.name,useSim)})).sort((a,b)=>b.pts-a.pts||b.exatos-a.exatos||a.name.localeCompare(b.name,'pt'));}
 
 /* ── MINI GRÁFICO DE TENDÊNCIA (SVG inline) ── */
 function trendSVG(pts_history,color){
