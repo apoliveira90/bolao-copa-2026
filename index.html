@@ -652,6 +652,8 @@ function initDateFilters() {
   const dd = String(today.getDate()).padStart(2,'0');
   const mm = String(today.getMonth()+1).padStart(2,'0');
   const todayStr = dd+'/'+mm;
+  // Auto-seleciona hoje na primeira carga se não há filtro ativo
+  if(dateFilter==='todos' && GAME_DATES[todayStr]) dateFilter=todayStr;
 
   const btns = Object.keys(GAME_DATES).map((date,i) => {
     const idxs = GAME_DATES[date];
@@ -662,10 +664,12 @@ function initDateFilters() {
     if(hasLive) dot = '<span class="date-dot" style="background:#4ade80"></span>';
     else if(hasDone) dot = '<span class="date-dot" style="background:rgba(16,185,129,.4)"></span>';
     else if(isToday) dot = '<span class="date-dot" style="background:var(--gold)"></span>';
-    const label = isToday ? '📅 Hoje' : date;
-    const active = (isToday && dateFilter==='todos') ? '' : (date===dateFilter?' active':'');
-    return `<button class="date-btn${active}" onclick="filterDate('${date}',this)">${dot}${label}</button>`;
+    // Se hoje é dia de jogos, substitui a label pelo emoji de hoje
+    const label = isToday ? `📅 ${date}` : date;
+    const isActive = date===dateFilter || (isToday && dateFilter==='todos');
+    return `<button class="date-btn${isActive?' active':''}" onclick="filterDate('${date}',this)">${dot}${label}</button>`;
   });
+  // Não mostra botão "Todos os dias" separado do "Hoje" — só "Todos" quando não há dia selecionado
   document.getElementById('dateFilterBtns').innerHTML =
     `<button class="date-btn${dateFilter==='todos'?' active':''}" onclick="filterDate('todos',this)">Todos os dias</button>` +
     btns.join('');
