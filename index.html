@@ -624,22 +624,26 @@ function renderRanking(){
 /* ── JOGOS ── */
 // Mapeia cada jogo para sua data (baseado na ordem da Copa 2026)
 // Dia 1=11/06, Dia 2=12/06, etc. — 4 jogos por dia na fase de grupos
+// Mapeamento real baseado no calendário oficial FIFA 2026 (horário de Brasília)
+// Jogos que passam da meia-noite BRT pertencem ao dia em que começam
 const GAME_DATES = {
-  '11/06':[0,1],                          // Jogo 1-2
-  '12/06':[2,3,4,5],                      // Jogo 3-6
-  '13/06':[6,7,8,9],                      // Jogo 7-10
-  '14/06':[10,11,12,13,14,15],            // Jogo 11-16
-  '15/06':[16,17,18,19,20,21,22,23],      // Jogo 17-24
-  '17/06':[24,25,26,27],                  // Jogo 25-28
-  '18/06':[28,29,30,31],                  // Jogo 29-32
-  '19/06':[32,33,34,35],                  // Jogo 33-36
-  '20/06':[36,37,38,39,40,41,42,43],      // Jogo 37-44
-  '21/06':[44,45,46,47],                  // Jogo 45-48
-  '22/06':[48,49,50,51],                  // Jogo 49-52
-  '23/06':[52,53,54,55],                  // Jogo 53-56
-  '24/06':[56,57,58,59,60,61,62,63],      // Jogo 57-64
-  '25/06':[64,65,66,67],                  // Jogo 65-68
-  '26/06':[68,69,70,71],                  // Jogo 69-72
+  '11/06':[0,1],            // #1 México×Áf.Sul 16h, #2 Coreia×Rep.Tcheca 23h
+  '12/06':[2,3],            // #3 Canadá×Bósnia 16h, #4 EUA×Paraguai 22h
+  '13/06':[4,5,6,7],        // #5 Austrália×Turquia 1h, #6 Catar×Suiça 16h, #7 Brasil×Marrocos 19h, #8 Haiti×Escócia 22h
+  '14/06':[8,9,10,11],      // #9 Alemanha×Curaçao 14h, #10 Holanda×Japão 17h, #11 CostaMar×Equador 20h, #12 Suécia×Tunísia 23h
+  '15/06':[12,13,14,15],    // #13 Espanha×CaboVerde, #14 Bélgica×Egito, #15 Arábia×Uruguai, #16 Irã×NovaZelândia
+  '16/06':[16,17,18,19],    // #17 França×Senegal, #18 Iraque×Noruega, #19 Argentina×Argélia, #20 Áustria×Jordânia
+  '17/06':[20,21,22,23],    // #21 Portugal×Congo, #22 Inglaterra×Croácia, #23 Gana×Panamá, #24 Uzbequistão×Colômbia
+  '18/06':[24,25,26,27],    // Rodada 2 início
+  '19/06':[28,29,30,31],
+  '20/06':[32,33,34,35],
+  '21/06':[36,37,38,39,40,41,42,43],
+  '22/06':[44,45,46,47],
+  '23/06':[48,49,50,51],
+  '24/06':[52,53,54,55],
+  '25/06':[56,57,58,59,60,61,62,63],
+  '26/06':[64,65,66,67],
+  '27/06':[68,69,70,71],
 };
 
 function gameDateLabel(idx) {
