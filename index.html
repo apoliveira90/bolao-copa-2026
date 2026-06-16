@@ -142,6 +142,14 @@ function togglePalpites(el){
 
 /* ── FILTROS ── */
 .gfilters{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px}
+.date-filters-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch;padding-bottom:4px;margin-bottom:6px}
+.date-filters-wrap::-webkit-scrollbar{height:2px}
+.date-filters-wrap::-webkit-scrollbar-thumb{background:rgba(255,255,255,.15);border-radius:2px}
+.date-filters{display:flex;gap:5px;min-width:max-content}
+.date-btn{padding:4px 12px;border-radius:16px;border:1px solid rgba(255,255,255,.14);background:rgba(255,255,255,.06);color:var(--text-muted);font-size:11px;font-weight:600;cursor:pointer;transition:.12s;white-space:nowrap}
+.date-btn.active{background:linear-gradient(135deg,rgba(0,39,118,.6),rgba(16,185,129,.22));color:#fff;border-color:rgba(244,196,48,.38);box-shadow:0 0 10px rgba(244,196,48,.14)}
+.date-btn:hover:not(.active){background:rgba(255,255,255,.1);color:var(--text)}
+.date-btn .date-dot{display:inline-block;width:6px;height:6px;border-radius:50%;margin-right:4px;vertical-align:middle}
 .group-filters-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch;padding-bottom:4px;margin-bottom:12px}
 .group-filters-wrap::-webkit-scrollbar{height:2px}
 .group-filters-wrap::-webkit-scrollbar-thumb{background:rgba(255,255,255,.15);border-radius:2px}
@@ -379,6 +387,7 @@ td:first-child{color:var(--text-dim)}
     <button class="fbtn" onclick="filterGames('finalizados',this)">Finalizados</button>
     <button class="fbtn" onclick="filterGames('live',this)">🔴 Ao vivo</button>
   </div>
+  <div class="date-filters-wrap"><div class="date-filters" id="dateFilterBtns"></div></div>
   <div class="group-filters-wrap"><div class="group-filters" id="groupFilterBtns"></div></div>
   <div class="glist" id="gamesList"></div>
 </div>
@@ -448,7 +457,7 @@ const GAMES_RAW=[{n:1,g:'A',t1:'México',t2:'África do Sul'},{n:2,g:'A',t1:'Cor
 /* ── ESTADO ── */
 const officialResults=new Array(72).fill(null);
 const liveGames={},simResults={},simBuffer={};
-let refreshOn=true,refreshTimer=null,currentFilter='todos',groupFilter='todos',simGroupFilter='todos';
+let refreshOn=true,refreshTimer=null,currentFilter='todos',groupFilter='todos',dateFilter='todos',simGroupFilter='todos';
 let pendingOfficial={},rankPositions={},prevPositions={};
 // histórico de pontos por rodada (a cada 6 jogos = rodada)
 const scoreHistory={};
@@ -613,6 +622,65 @@ function renderRanking(){
 }
 
 /* ── JOGOS ── */
+// Mapeia cada jogo para sua data (baseado na ordem da Copa 2026)
+// Dia 1=11/06, Dia 2=12/06, etc. — 4 jogos por dia na fase de grupos
+const GAME_DATES = {
+  '11/06':Array.from({length:4},(_,i)=>i),      // jogos 1-4 (idx 0-3)
+  '12/06':Array.from({length:4},(_,i)=>i+4),    // jogos 5-8 (idx 4-7)
+  '13/06':Array.from({length:4},(_,i)=>i+8),    // jogos 9-12 (idx 8-11)
+  '14/06':Array.from({length:4},(_,i)=>i+12),   // jogos 13-16 (idx 12-15)
+  '15/06':Array.from({length:4},(_,i)=>i+16),   // jogos 17-20 (idx 16-19)
+  '16/06':Array.from({length:4},(_,i)=>i+20),   // jogos 21-24 (idx 20-23)
+  '17/06':Array.from({length:4},(_,i)=>i+24),   // jogos 25-28 (idx 24-27)
+  '18/06':Array.from({length:4},(_,i)=>i+28),   // jogos 29-32 (idx 28-31)
+  '19/06':Array.from({length:4},(_,i)=>i+32),   // jogos 33-36 (idx 32-35)
+  '20/06':Array.from({length:4},(_,i)=>i+36),   // jogos 37-40 (idx 36-39)
+  '21/06':Array.from({length:4},(_,i)=>i+40),   // jogos 41-44 (idx 40-43)
+  '22/06':Array.from({length:4},(_,i)=>i+44),   // jogos 45-48 (idx 44-47)
+  '23/06':Array.from({length:4},(_,i)=>i+48),   // jogos 49-52 (idx 48-51)
+  '24/06':Array.from({length:4},(_,i)=>i+52),   // jogos 53-56 (idx 52-55)
+  '25/06':Array.from({length:4},(_,i)=>i+56),   // jogos 57-60 (idx 56-59)
+  '26/06':Array.from({length:4},(_,i)=>i+60),   // jogos 61-64 (idx 60-63)
+  '27/06':Array.from({length:4},(_,i)=>i+64),   // jogos 65-68 (idx 64-67)
+  '28/06':Array.from({length:4},(_,i)=>i+68),   // jogos 69-72 (idx 68-71)
+};
+
+function gameDateLabel(idx) {
+  for(const[date,idxs]of Object.entries(GAME_DATES)){if(idxs.includes(idx))return date;}
+  return null;
+}
+
+function initDateFilters() {
+  const today = new Date();
+  const dd = String(today.getDate()).padStart(2,'0');
+  const mm = String(today.getMonth()+1).padStart(2,'0');
+  const todayStr = dd+'/'+mm;
+
+  const btns = Object.keys(GAME_DATES).map((date,i) => {
+    const idxs = GAME_DATES[date];
+    const hasDone = idxs.some(i=>officialResults[i]);
+    const hasLive = idxs.some(i=>liveGames[i]);
+    const isToday = date===todayStr;
+    let dot = '';
+    if(hasLive) dot = '<span class="date-dot" style="background:#4ade80"></span>';
+    else if(hasDone) dot = '<span class="date-dot" style="background:rgba(16,185,129,.4)"></span>';
+    else if(isToday) dot = '<span class="date-dot" style="background:var(--gold)"></span>';
+    const label = isToday ? '📅 Hoje' : date;
+    const active = (isToday && dateFilter==='todos') ? '' : (date===dateFilter?' active':'');
+    return `<button class="date-btn${active}" onclick="filterDate('${date}',this)">${dot}${label}</button>`;
+  });
+  document.getElementById('dateFilterBtns').innerHTML =
+    `<button class="date-btn${dateFilter==='todos'?' active':''}" onclick="filterDate('todos',this)">Todos os dias</button>` +
+    btns.join('');
+}
+
+function filterDate(d, btn) {
+  dateFilter = d;
+  document.querySelectorAll('.date-filters .date-btn').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  renderGames();
+}
+
 function initGroupFilters(){
   document.getElementById('groupFilterBtns').innerHTML=
     ['todos',...GROUPS].map((g,i)=>`<button class="fbtn${i===0?' active':''}" onclick="filterGroup('${g}',this)">${g==='todos'?'Todos':'Gr. '+g}</button>`).join('');
@@ -621,7 +689,16 @@ function filterGroup(g,btn){groupFilter=g;document.querySelectorAll('#groupFilte
 function filterGames(f,btn){currentFilter=f;document.querySelectorAll('#jogos .gfilters .fbtn').forEach(b=>b.classList.remove('active'));btn.classList.add('active');renderGames();}
 function renderGames(){
   const list=document.getElementById('gamesList');
-  const filtered=GAMES_RAW.filter(g=>{const idx=g.n-1,isLive=!!liveGames[idx],isDone=!!officialResults[idx];let ok=true;if(currentFilter==='pendentes')ok=!isDone&&!isLive;else if(currentFilter==='finalizados')ok=isDone;else if(currentFilter==='live')ok=isLive;if(groupFilter!=='todos')ok=ok&&(g.g===groupFilter);return ok;});
+  const filtered=GAMES_RAW.filter(g=>{
+    const idx=g.n-1,isLive=!!liveGames[idx],isDone=!!officialResults[idx];
+    let ok=true;
+    if(currentFilter==='pendentes')ok=!isDone&&!isLive;
+    else if(currentFilter==='finalizados')ok=isDone;
+    else if(currentFilter==='live')ok=isLive;
+    if(groupFilter!=='todos')ok=ok&&(g.g===groupFilter);
+    if(dateFilter!=='todos'){const d=gameDateLabel(idx);ok=ok&&(d===dateFilter);}
+    return ok;
+  });
   if(!filtered.length){list.innerHTML='<div class="empty">Nenhum jogo neste filtro.</div>';return;}
   list.innerHTML=filtered.map(game=>{
     const idx=game.n-1,res=officialResults[idx],live=liveGames[idx],isDone=!!res,isLive=!!live;
@@ -847,7 +924,7 @@ async function fetchLive(){
   document.getElementById('hstatus').textContent='Atualizado '+
     new Date().toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit',second:'2-digit'})+
     ' · '+statusParts.join(' ');
-  if(upd){renderRanking();if(document.getElementById('jogos').classList.contains('active'))renderGames();}
+  if(upd){renderRanking();initDateFilters();if(document.getElementById('jogos').classList.contains('active'))renderGames();}
 }
 function toggleRefresh(){refreshOn=!refreshOn;const b=document.getElementById('liveBadge'),d=document.getElementById('liveDot'),t=document.getElementById('liveText');if(refreshOn){b.classList.remove('paused');d.style.background='#4ade80';d.style.animation='';d.style.boxShadow='0 0 6px #4ade80';t.textContent='AO VIVO';startRefresh();}else{b.classList.add('paused');d.style.background='#9ca3af';d.style.animation='none';d.style.boxShadow='none';t.textContent='PAUSADO';clearInterval(refreshTimer);document.getElementById('hstatus').textContent='Auto-refresh pausado';}}
 function startRefresh(){fetchLive();refreshTimer=setInterval(()=>{if(refreshOn)fetchLive();},60000);}
@@ -902,7 +979,7 @@ async function fetchParticipants(){
 }
 
 /* ── INIT ── */
-initGroupFilters();renderSimFilters();renderRanking();startRefresh();
+initGroupFilters();initDateFilters();renderSimFilters();renderRanking();startRefresh();
 // Busca palpites do Drive ao iniciar e a cada 10 minutos
 fetchParticipants();
 setInterval(fetchParticipants, 10 * 60 * 1000);
