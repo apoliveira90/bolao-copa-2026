@@ -625,24 +625,21 @@ function renderRanking(){
 // Mapeia cada jogo para sua data (baseado na ordem da Copa 2026)
 // Dia 1=11/06, Dia 2=12/06, etc. — 4 jogos por dia na fase de grupos
 const GAME_DATES = {
-  '11/06':Array.from({length:4},(_,i)=>i),      // jogos 1-4 (idx 0-3)
-  '12/06':Array.from({length:4},(_,i)=>i+4),    // jogos 5-8 (idx 4-7)
-  '13/06':Array.from({length:4},(_,i)=>i+8),    // jogos 9-12 (idx 8-11)
-  '14/06':Array.from({length:4},(_,i)=>i+12),   // jogos 13-16 (idx 12-15)
-  '15/06':Array.from({length:4},(_,i)=>i+16),   // jogos 17-20 (idx 16-19)
-  '16/06':Array.from({length:4},(_,i)=>i+20),   // jogos 21-24 (idx 20-23)
-  '17/06':Array.from({length:4},(_,i)=>i+24),   // jogos 25-28 (idx 24-27)
-  '18/06':Array.from({length:4},(_,i)=>i+28),   // jogos 29-32 (idx 28-31)
-  '19/06':Array.from({length:4},(_,i)=>i+32),   // jogos 33-36 (idx 32-35)
-  '20/06':Array.from({length:4},(_,i)=>i+36),   // jogos 37-40 (idx 36-39)
-  '21/06':Array.from({length:4},(_,i)=>i+40),   // jogos 41-44 (idx 40-43)
-  '22/06':Array.from({length:4},(_,i)=>i+44),   // jogos 45-48 (idx 44-47)
-  '23/06':Array.from({length:4},(_,i)=>i+48),   // jogos 49-52 (idx 48-51)
-  '24/06':Array.from({length:4},(_,i)=>i+52),   // jogos 53-56 (idx 52-55)
-  '25/06':Array.from({length:4},(_,i)=>i+56),   // jogos 57-60 (idx 56-59)
-  '26/06':Array.from({length:4},(_,i)=>i+60),   // jogos 61-64 (idx 60-63)
-  '27/06':Array.from({length:4},(_,i)=>i+64),   // jogos 65-68 (idx 64-67)
-  '28/06':Array.from({length:4},(_,i)=>i+68),   // jogos 69-72 (idx 68-71)
+  '11/06':[0,1],                          // Jogo 1-2
+  '12/06':[2,3,4,5],                      // Jogo 3-6
+  '13/06':[6,7,8,9],                      // Jogo 7-10
+  '14/06':[10,11,12,13,14,15],            // Jogo 11-16
+  '15/06':[16,17,18,19,20,21,22,23],      // Jogo 17-24
+  '17/06':[24,25,26,27],                  // Jogo 25-28
+  '18/06':[28,29,30,31],                  // Jogo 29-32
+  '19/06':[32,33,34,35],                  // Jogo 33-36
+  '20/06':[36,37,38,39,40,41,42,43],      // Jogo 37-44
+  '21/06':[44,45,46,47],                  // Jogo 45-48
+  '22/06':[48,49,50,51],                  // Jogo 49-52
+  '23/06':[52,53,54,55],                  // Jogo 53-56
+  '24/06':[56,57,58,59,60,61,62,63],      // Jogo 57-64
+  '25/06':[64,65,66,67],                  // Jogo 65-68
+  '26/06':[68,69,70,71],                  // Jogo 69-72
 };
 
 function gameDateLabel(idx) {
